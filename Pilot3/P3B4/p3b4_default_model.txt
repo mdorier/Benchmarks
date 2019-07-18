@@ -7,6 +7,6 @@ epochs = 1
 optimizer = 0
 learning_rate = 0.0001
 wv_len = 50
-attention_size = 500
+attention_size = 512
 dropout = 0.1
 

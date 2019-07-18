@@ -5,7 +5,8 @@ import os, sys, gzip
 import time
 import keras
 
-from tf_mthcan import hcan
+# from tf_mthcan import hcan
+from multitask_hcan import hcan
 
 import argparse
 
@@ -167,11 +168,19 @@ def run(gParameters):
     mask = np.concatenate(mask,0)
     
     # train model
-    model = hcan( vocab, num_classes, max_lines, max_words, 
-                  attention_size= attention_size,
+#    model = hcan( vocab, num_classes, max_lines, max_words, 
+#                  attention_size= attention_size,
+#                  dropout_rate = dropout,
+#                  lr = learning_rate,
+#                  optimizer= optimizer 
+#    )
+
+    model = hcan( vocab, num_classes, max_lines, max_words,
+                  word_attn_size = attention_size,
                   dropout_rate = dropout,
                   lr = learning_rate,
-                  optimizer= optimizer 
+                  optimizer = optimizer,
+                  preset_weight = preset_weights
     )
 
     ret = model.train(
@@ -205,11 +214,16 @@ def run(gParameters):
 
 def main():
 
-    gParameters = initialize_parameters()
-    run(gParameters)
-#    avg_loss = run(gParameters)
-#    print( "Return: ", avg_loss.history[ 'val_loss' ][-1] )
+    os.makedirs('./retention_saves', exist_ok=True)
+    if args.preset_weights:
+        savepath = os.path.join('./retention_saves', 'val_loss_pretrained')
+    else:
+        savepath = os.path.join('./retention_saves', 'val_loss_scratch')
 
+    gParameters = initialize_parameters()
+    avg_loss = run(gParameters)
+    print( "Return: ", avg_loss.history[ 'val_loss' ][-1] )
+    np.save(savepath, avg_loss.history['val_loss'])
 
 if __name__ == '__main__':
     main()
