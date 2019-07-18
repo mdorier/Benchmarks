@@ -69,7 +69,7 @@ class hcan(object):
 
     def __init__(self,embedding_matrix,num_classes,max_sents,max_words,
                  word_attn_size=512, sent_attn_size= 512, dropout_rate=0.9,
-                 activation=tf.nn.elu,lr=0.0001, optimizer= 'adam', preset_weight= True,
+                 activation=tf.nn.elu,lr=0.0001, optimizer= 'adam', preset_weight=False,
                  random_subset_weights=False, reduced_word_attn=None, reduced_sent_attn=None):
 
         tf.reset_default_graph()
@@ -239,7 +239,7 @@ class hcan(object):
 
         #masking
         mask_base = tf.cast(tf.sequence_mask(num_words,max_words_),tf.float32)
-        mask = tf.tile(tf.expand_dims(mask_base,2),[1,1,self.sent_attn_size])
+        mask = tf.tile(tf.expand_dims(mask_base,2),[1,1,self.word_attn_size])
         mask2 = tf.tile(tf.expand_dims(mask_base,2),[1,1,max_words_])
 
         #word self attention

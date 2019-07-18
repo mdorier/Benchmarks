@@ -73,7 +73,8 @@ def run(gParameters):
         optimizer = 'rmsprop'
 
     wv_len = gParameters[ 'wv_len' ]
-    attention_size = gParameters[ 'attention_size' ]
+    word_attn_size = gParameters[ 'word_attn_size' ]
+    sent_attn_size = gParameters[ 'sent_attn_size' ]
 
     ### hjy - subsection
     group = 0
@@ -176,7 +177,8 @@ def run(gParameters):
 #    )
 
     model = hcan( vocab, num_classes, max_lines, max_words,
-                  word_attn_size = attention_size,
+                  word_attn_size = word_attn_size,
+                  sent_attn_size = sent_attn_size,
                   dropout_rate = dropout,
                   lr = learning_rate,
                   optimizer = optimizer,
