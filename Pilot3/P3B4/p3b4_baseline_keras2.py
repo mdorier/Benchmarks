@@ -207,7 +207,8 @@ def run(gParameters):
             np.array( test_y[ :, 5 ] )
         ] 
         #[ np.array( test_y[ :, 0 ] ), np.array( test_y[ :, 1 ] ), np.array( test_y[ :, 2 ] ), np.array( test_y[ :, 3 ] ) ]
-        ]
+        ],
+        save_weight = save_weights
         )
 
     
