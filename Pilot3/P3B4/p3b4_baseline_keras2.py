@@ -21,7 +21,7 @@ parser.add_argument( '--n_folds', type= int, default= 0, help= 'fold' )
 parser.add_argument( '--fold', type= int, default= 0, help= 'fold' )
 parser.add_argument( '--tasks', type= str, default= [ 'site' , 'subsite', 'laterality', 'histology', 'behavior', 'grade' ], help= 'fold' )
 parser.add_argument( '--preset_weights', action= 'store_true', default= False )
-parser.add_argument( '--save_weights', action= 'store_true', default= False )
+parser.add_argument( '--save_weights', action= 'store_true', default= True )
 args = parser.parse_args()
 preset_weights = args.preset_weights
 save_weights = args.save_weights
@@ -61,17 +61,7 @@ def run(gParameters):
     batch_size = gParameters[ 'batch_size' ]
     epochs = gParameters[ 'epochs' ]
     dropout = gParameters[ 'dropout' ]
-
     optimizer = gParameters[ 'optimizer' ]
-    if optimizer == 0:
-        optimizer = 'adam'
-    elif optimizer == 1:
-        optimizer = 'adadelta'
-    elif optimizer == 2:
-        optimizer = 'sgd'
-    elif optimizer == 3:
-        optimizer = 'rmsprop'
-
     wv_len = gParameters[ 'wv_len' ]
     word_attn_size = gParameters[ 'word_attn_size' ]
     sent_attn_size = gParameters[ 'sent_attn_size' ]
@@ -138,14 +128,6 @@ def run(gParameters):
     vocab_size = max_vocab + 1
     vocab = np.random.rand( vocab_size, wv_len )
 
-#    num_classes = []
-#    for task in range( len( train_y[ 0, : ] ) ):
-#        cat = np.unique( train_y[ :, task ] )
-#        num_classes.append( len( cat ) )
-#        train_y[ :, task ] = [ np.where( cat == x )[ 0 ][ 0 ] for x in train_y[ :, task ] ]
-#        test_y[ :, task ] = [ np.where( cat == x )[ 0 ][ 0 ] for x in test_y[ :, task ] ]
-#    num_tasks = len( num_classes )
-
     train_samples = train_x.shape[ 0 ]
     test_samples = test_x.shape[ 0 ]
 
@@ -168,14 +150,6 @@ def run(gParameters):
         mask.append(doc_mask)
     mask = np.concatenate(mask,0)
     
-    # train model
-#    model = hcan( vocab, num_classes, max_lines, max_words, 
-#                  attention_size= attention_size,
-#                  dropout_rate = dropout,
-#                  lr = learning_rate,
-#                  optimizer= optimizer 
-#    )
-
     model = hcan( vocab, num_classes, max_lines, max_words,
                   word_attn_size = word_attn_size,
                   sent_attn_size = sent_attn_size,
