@@ -310,7 +310,7 @@ class hcan(object):
 
         best_val_loss = 1e15
         patience = 0
-
+        
         for ep in range(epochs):
 
             #shuffle data
