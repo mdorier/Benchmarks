@@ -70,7 +70,7 @@ class hcan(object):
     def __init__(self,embedding_matrix,num_classes,max_sents,max_words,
                  word_attn_size=512, sent_attn_size= 512, dropout_rate=0.9,
                  activation=tf.nn.elu,lr=0.0001, optimizer= 'adam', preset_weight=False,
-                 random_subset_weights=False, reduced_word_attn=None, reduced_sent_attn=None):
+                 random_subset_weights=True, reduced_word_attn=True, reduced_sent_attn=True):
 
         tf.reset_default_graph()
 
@@ -86,25 +86,26 @@ class hcan(object):
         self.sent_attn_size = sent_attn_size
         self.activation = activation
         self.num_tasks = len(num_classes)
-
+        parent_dir='/gpfs/alpine/proj-shared/med107/gounley1/Benchmarks/Pilot3/P3B4/'        
+ 
         #weights
         preset = False
         if preset_weight:
             preset = True
             print( 'Load preset weights' )
-            word_Q_W = np.load('savedweights/word_Q_W.npy')
-            word_Q_b = np.load('savedweights/word_Q_b.npy')
-            word_K_W = np.load('savedweights/word_K_W.npy')
-            word_K_b = np.load('savedweights/word_K_b.npy')
-            word_V_W = np.load('savedweights/word_V_W.npy')
-            word_V_b = np.load('savedweights/word_V_b.npy')
+            word_Q_W = np.load(parent_dir+'savedweights/word_Q_W.npy')
+            word_Q_b = np.load(parent_dir+'savedweights/word_Q_b.npy')
+            word_K_W = np.load(parent_dir+'savedweights/word_K_W.npy')
+            word_K_b = np.load(parent_dir+'savedweights/word_K_b.npy')
+            word_V_W = np.load(parent_dir+'savedweights/word_V_W.npy')
+            word_V_b = np.load(parent_dir+'savedweights/word_V_b.npy')
 
-            sent_Q_W = np.load('savedweights/sent_Q_W.npy')
-            sent_Q_b = np.load('savedweights/sent_Q_b.npy')
-            sent_K_W = np.load('savedweights/sent_K_W.npy')
-            sent_K_b = np.load('savedweights/sent_K_b.npy')
-            sent_V_W = np.load('savedweights/sent_V_W.npy')
-            sent_V_b = np.load('savedweights/sent_V_b.npy')
+            sent_Q_W = np.load(parent_dir+'savedweights/sent_Q_W.npy')
+            sent_Q_b = np.load(parent_dir+'savedweights/sent_Q_b.npy')
+            sent_K_W = np.load(parent_dir+'savedweights/sent_K_W.npy')
+            sent_K_b = np.load(parent_dir+'savedweights/sent_K_b.npy')
+            sent_V_W = np.load(parent_dir+'savedweights/sent_V_W.npy')
+            sent_V_b = np.load(parent_dir+'savedweights/sent_V_b.npy')
 
             # may need resampling for attention
             if random_subset_weights:
@@ -307,6 +308,9 @@ class hcan(object):
 
         history = History()
 
+        best_val_loss = 1e15
+        patience = 0
+
         for ep in range(epochs):
 
             #shuffle data
@@ -359,8 +363,18 @@ class hcan(object):
             print( 'epoch %i val_loss %.4f' % ( ep + 1, val_loss ) )
             history.history.setdefault('val_loss',[]).append(val_loss)
 
+            if val_loss < best_val_loss:
+              best_val_loss = val_loss
+              patience = 0
+            else:
+              patience += 1
+              if patience > 5:
+              break
+
             #reset timer
             start_time = time.time()
+
+        history.history[ 'val_loss' ] = history.history[ 'val_loss' ][ : -5 ]
 
         if save_weight:
             print( 'Save weights for preset' )

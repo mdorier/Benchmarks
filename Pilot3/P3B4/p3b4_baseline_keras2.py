@@ -131,8 +131,8 @@ def run(gParameters):
     train_samples = train_x.shape[ 0 ]
     test_samples = test_x.shape[ 0 ]
 
-    max_lines = 50
-    max_words = 30
+    max_lines = 150
+    max_words = 10
 
     train_x = train_x.reshape( ( train_x.shape[ 0 ], max_lines, max_words ) )
     test_x = test_x.reshape( ( test_x.shape[ 0 ], max_lines, max_words ) )
