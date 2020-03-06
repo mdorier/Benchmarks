@@ -21,7 +21,19 @@ except:
     from tensorflow.keras.optimizers import SGD, Adam, RMSprop
     from tensorflow.keras.models import Sequential, Model, model_from_json, model_from_yaml
     from tensorflow.keras.utils import to_categorical
+    import tensorflow.keras.callbacks
     from tensorflow.keras.callbacks import ModelCheckpoint, CSVLogger, ReduceLROnPlateau
+
+try:
+    import pymargo
+    from pymargo.core import Engine
+    from flamestore.client import Client
+    from flamestore import log
+    print("Successfully imported FlameStore")
+    use_flamestore = True
+except:
+    print("Could not import FlameStore, falling back to file system storage")
+    use_flamestore = False
 
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
@@ -30,6 +42,46 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 
 import nt3 as bmk
 import candle
+
+class FlameStoreCheckpoint(tensorflow.keras.callbacks.Callback):
+
+    def __init__(self, model_name, workspace='.', include_optimizer=True):
+        self._model_name = model_name
+        self._workspace = workspace
+        self._include_optimizer = include_optimizer
+        self._client = None
+        self._engine = None
+
+    def on_train_begin(self, logs=None):
+        print("[FlameStore] Initializing Margo Engine")
+        self._engine = Engine('ofi+gni', use_progress_thread=True, mode=pymargo.server)
+        print("[FlameStore] Initializing FlameStore Client")
+        self._client = Client(self._engine, self._workspace)
+        print("[FlameStore] Engine and Client correctly initialized")
+        print("[FlameStore] Registering model {}".format(self._model_name))
+        self._client.register_model(self._model_name, self.model, include_optimizer=self._include_optimizer)
+        print("[FlameStore] Model succesfully registered, training can start")
+
+    def on_train_end(self, logs=None):
+        print("[FlameStore] Training ended for model {}".format(self._model_name))
+        self._client = None
+        self._engine = None
+
+    def on_train_batch_begin(self, batch, logs=None):
+        print("[FlameStore] Starting batch {}".format(batch))
+
+    def on_train_batch_end(self, batch, logs=None):
+        print("[FlameStore] Training: batch {} ended".format(batch))
+        print("[FlameStore] Storing current weights")
+        self._client.save_weights(self._model_name, self.model, include_optimizer=self._include_optimizer)
+        print("[FlameStore] Model {} stored succesfully".format(self._model_name))
+
+    def on_test_batch_begin(self, batch, logs=None):
+        print('XXX Evaluating: batch {} begins'.format(batch))
+
+    def on_test_batch_end(self, batch, logs=None):
+        print('XXX Evaluating: batch {} ends'.format(batch))
+
 
 def initialize_parameters(default_model = 'nt3_default_model.txt'):
 
@@ -187,7 +239,13 @@ def run(gParameters):
     # set up a bunch of callbacks to do work during model training..
     model_name = gParameters['model_name']
     path = '{}/{}.autosave.model.h5'.format(output_dir, model_name)
-    # checkpointer = ModelCheckpoint(filepath=path, verbose=1, save_weights_only=False, save_best_only=True)
+    if use_flamestore:
+        model_name = "NT3"
+        workspace = "/projects/radix-io/flamestore/Supervisor/workflows/one-shot/flamestore-ws"
+        checkpointer = FlameStoreCheckpoint(model_name, workspace)
+    else:
+        checkpointer = ModelCheckpoint(filepath=path, verbose=1, save_weights_only=False, save_best_only=False)
+
     csv_logger = CSVLogger('{}/training.log'.format(output_dir))
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=1, mode='auto', epsilon=0.0001, cooldown=0, min_lr=0)
     candleRemoteMonitor = candle.CandleRemoteMonitor(params=gParameters)
@@ -197,7 +255,7 @@ def run(gParameters):
                     epochs=gParameters['epochs'],
                     verbose=1,
                     validation_data=(X_test, Y_test),
-                    callbacks = [csv_logger, reduce_lr, candleRemoteMonitor, timeoutMonitor])
+                    callbacks = [csv_logger, reduce_lr, candleRemoteMonitor, timeoutMonitor, checkpointer])
 
     score = model.evaluate(X_test, Y_test, verbose=0)
 
