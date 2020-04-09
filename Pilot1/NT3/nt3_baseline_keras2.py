@@ -28,8 +28,7 @@ try:
     import pymargo
     from pymargo.core import Engine
     from flamestore.client import Client
-    from flamestore import log
-    print("Successfully imported FlameStore")
+    from flamestore.callbacks import RemoteCheckpointCallback as FlameStoreCheckpoint
     use_flamestore = True
 except:
     print("Could not import FlameStore, falling back to file system storage")
@@ -42,46 +41,6 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 
 import nt3 as bmk
 import candle
-
-class FlameStoreCheckpoint(tensorflow.keras.callbacks.Callback):
-
-    def __init__(self, model_name, workspace='.', include_optimizer=True):
-        self._model_name = model_name
-        self._workspace = workspace
-        self._include_optimizer = include_optimizer
-        self._client = None
-        self._engine = None
-
-    def on_train_begin(self, logs=None):
-        print("[FlameStore] Initializing Margo Engine")
-        self._engine = Engine('ofi+gni', use_progress_thread=True, mode=pymargo.server)
-        print("[FlameStore] Initializing FlameStore Client")
-        self._client = Client(self._engine, self._workspace)
-        print("[FlameStore] Engine and Client correctly initialized")
-        print("[FlameStore] Registering model {}".format(self._model_name))
-        self._client.register_model(self._model_name, self.model, include_optimizer=self._include_optimizer)
-        print("[FlameStore] Model succesfully registered, training can start")
-
-    def on_train_end(self, logs=None):
-        print("[FlameStore] Training ended for model {}".format(self._model_name))
-        self._client = None
-        self._engine = None
-
-    def on_train_batch_begin(self, batch, logs=None):
-        print("[FlameStore] Starting batch {}".format(batch))
-
-    def on_train_batch_end(self, batch, logs=None):
-        print("[FlameStore] Training: batch {} ended".format(batch))
-        print("[FlameStore] Storing current weights")
-        self._client.save_weights(self._model_name, self.model, include_optimizer=self._include_optimizer)
-        print("[FlameStore] Model {} stored succesfully".format(self._model_name))
-
-    def on_test_batch_begin(self, batch, logs=None):
-        print('XXX Evaluating: batch {} begins'.format(batch))
-
-    def on_test_batch_end(self, batch, logs=None):
-        print('XXX Evaluating: batch {} ends'.format(batch))
-
 
 def initialize_parameters(default_model = 'nt3_default_model.txt'):
 
@@ -242,7 +201,12 @@ def run(gParameters):
     if use_flamestore:
         model_name = "NT3"
         workspace = "/projects/radix-io/flamestore/Supervisor/workflows/one-shot/flamestore-ws"
-        checkpointer = FlameStoreCheckpoint(model_name, workspace)
+        restart = ('restart' in gParameters) and (int(gParameters['restart']) == 1)
+        checkpointer = FlameStoreCheckpoint(model_name="NT3",
+                                            workspace=workspace,
+                                            frequency={'epoch' : 1, 'batch': 1},
+                                            include_optimizer=True,
+                                            restart=restart)
     else:
         checkpointer = ModelCheckpoint(filepath=path, verbose=1, save_weights_only=False, save_best_only=False)
 
@@ -323,7 +287,6 @@ def run(gParameters):
     return history
 
 def main():
-
     gParameters = initialize_parameters()
     run(gParameters)
 
