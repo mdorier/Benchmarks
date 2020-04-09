@@ -13,7 +13,10 @@ additional_definitions = [
     'type':str},
 {'name':'classes',
     'type':int,
-    'default':2}
+    'default':2},
+{'name':'restart',
+    'type':int,
+    'default':0}
 ]
 
 required = [
